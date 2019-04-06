@@ -1,5 +1,4 @@
 const TelegramBot = require('node-telegram-bot-api');
-
 // replace the value below with the Telegram token you receive from @BotFather
 const token = '842870644:AAGKNzgAygQuFHbqeiouCOgJ03OXgDF_eFw';
 const bot = new TelegramBot(token, {polling: true});
@@ -23,6 +22,9 @@ function calculateWeekAgo(){
   let atTheBeginingOf = new Date(now.setDate(diff));
   return now;
 }
+function isPositiveInteger(s) {
+  return /^\+?[1-9][\d]*$/.test(s);
+}
 
 
 // Use connect method to connect to the server
@@ -33,71 +35,115 @@ MongoClient.connect(url, function(err, client) {
 
 
   //client.close();
-  function showConsumedNumber(collection){
-    //show quantity of something consumed this week
+  function showConsumedNumber(collection,msgChatId,callback){
     console.log("started");
-    let beersDrank = 0;
-    const db = client.db(dbName);
+    let beersDrunk = 0;
     const myCollection = db.collection(collection);
     myCollection.find().toArray(function(err,res){           //Why the fuck is it a promise;
       if(err){
         throw err;
-        //console.log(res)
       } else {
         res.forEach(function(r){
-          if(new Date(r.date*1000)>calculateWeekAgo()){
-            beersDrank = beersDrank + parseInt(r.consumed)
+          if(new Date(r.date*1000)>calculateWeekAgo()&&r.chatId==msgChatId){
+            beersDrunk = beersDrunk + parseInt(r.consumed)
           }
-        });
-        console.log(beersDrank);
-        return beersDrank;
 
+        });
+        console.log(beersDrunk);
       }
+      callback(beersDrunk);
     });
-    //return beersDrank;
   };
-  showConsumedNumber("alcohol");
+  //chat id = 305465575
+  //showConsumedNumber("greenStuff","305465575");
 
   //---------------------------------- up there is a db
-  bot.onText(/\/beers (.+)/, (msg, match) => {
+  bot.onText(/\/beers (.+)/i, (msg, match) => {
     let collection = db.collection("alcohol");
     const chatId = msg.chat.id;
-    const resp = "you drank "+match[1]+" beers";
+    const resp = "you just drank "+match[1]+" beers";
     const beerQuant = match[1];
     const name = msg.chat.first_name;
     console.log(match);
-    collection.insertOne({"chatId":chatId,"name":name,"date":msg.date,"consumed":beerQuant});
+    if(isPositiveInteger(beerQuant)){
+      collection.insertOne({"chatId":chatId,"name":name,"date":msg.date,"consumed":beerQuant});
+    } else {
+      resp = "a sign after beers should be an integer"
+    }
     bot.sendMessage(chatId, resp);
   });
 
 
-  bot.onText(/\/banki (.+)/, (msg, match) => {
+  bot.onText(/\/banki (.+)/i, (msg, match) => {
     let collection = db.collection("greenStuff");
     const resp = "Nice, you just did "+match[1]+" banok";
     const chatId = msg.chat.id;
     const bankiQuant = match[1];
     const name = msg.chat.first_name;
+    if(isPositiveInteger(bankiQuant)){
+      collection.insertOne({"chatId":chatId,"name":name,"date":msg.date,"consumed":bankiQuant});
+    } else {
+      resp = "a sign after banki should be an integer";
+    }
     //console.log(match);
-    collection.insertOne({"chatId":chatId,"name":name,"date":msg.date,"consumed":bankiQuant});
+    bot.sendMessage(chatId, resp);
+  });
+
+  bot.onText(/\/vodka (.+)/i, (msg, match) => {
+    let collection = db.collection("vodka");
+    const resp = "you just drank "+match[1]+"g of vodka";
+    const chatId = msg.chat.id;
+    const vodkaQuant = match[1];
+    const name = msg.chat.first_name;
+    if(isPositiveInteger(vodkaQuant)){
+      collection.insertOne({"chatId":chatId,"name":name,"date":msg.date,"consumed":vodkaQuant});
+    } else {
+      resp = "a sign after vodka should be an integer";
+    }
     //console.log(match);
     bot.sendMessage(chatId, resp);
   });
 
 
-  bot.onText(/\/beersThisWeek/, (msg, match) => {
-    let beersStat = showConsumedNumber("alcohol");
-    let myCollection = db.collection()
-    const resp = "you did "+beersStat+" banki";
-    const chatId = msg.chat.id;
-    //console.log(match);
-    bot.sendMessage(chatId, resp);
+  bot.onText(/\/beersThisWeek/i, (msg, match) => {
+      const chatId = msg.chat.id;
+      showConsumedNumber("alcohol",chatId, function(beersPerWeek){
+        const resp = "you drank "+beersPerWeek+" beers this week";
+        console.log(beersPerWeek);
+        bot.sendMessage(chatId, resp);
+      });
+
   });
-  bot.onText(/\/banokThisWeek/, (msg, match) => {
-    let banokStat = showConsumedNumber("greenStuff");
-    const resp = "you did "+ banokStat +" banki";
+  bot.onText(/\/banokThisWeek/i, (msg, match) => {
     const chatId = msg.chat.id;
-    //console.log(match);
-    bot.sendMessage(chatId, resp);
+    showConsumedNumber("greenStuff",chatId,function(banokPerWeek){
+      console.log(banokPerWeek);
+      const resp = "you did "+ banokPerWeek +" banki";
+      bot.sendMessage(chatId, resp);
+    })
+
+  });
+
+  bot.onText(/\/vodkaThisWeek/i, (msg, match) => {
+    const chatId = msg.chat.id;
+    showConsumedNumber("vodka",chatId,function(vodkiPerWeek){
+      const resp = "you drank "+ vodkiPerWeek +" of vodka this week";
+      bot.sendMessage(chatId, resp);
+    })
+  });
+
+  bot.onText(/\/start/i, (msg, match) => {
+    const chatId = msg.chat.id;
+
+      const resp = `Feel free to use the following commands:
+/beers <Number> - records the number of beers drunk(o.5 L = 1 beer)
+/vodka <Number> - records gramms of vodka you drank
+/banki <Number> - records the number of puffs smoked
+/banokThisWeek - shows your weekly puff score
+/vodkaThisWeek - shows vodka weekly score in gramms
+/beersThisWeek - shows your weekly beer score`
+      bot.sendMessage(chatId, resp);
+
   });
 
 
