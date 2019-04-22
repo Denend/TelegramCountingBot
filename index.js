@@ -25,22 +25,17 @@ function calculateWeekAgo(){
 function isPositiveInteger(s) {
   return /^\+?[1-9][\d]*$/.test(s);
 }
-
-
 // Use connect method to connect to the server
 MongoClient.connect(url, function(err, client) {
   assert.equal(null, err);
   console.log("Connected successfully to server");
   const db = client.db(dbName);
-
-
-  //client.close();
+  
   function showConsumedNumber(collection,msgChatId,callback){
     console.log("started");
     let beersDrunk = 0;
     const myCollection = db.collection(collection);
-    myCollection.find().toArray(function(err,res){           //Why the fuck is it a promise;
-      if(err){
+    myCollection.find().toArray(function(err,res){           
         throw err;
       } else {
         res.forEach(function(r){
@@ -100,7 +95,6 @@ MongoClient.connect(url, function(err, client) {
     } else {
       resp = "a sign after vodka should be an integer";
     }
-    //console.log(match);
     bot.sendMessage(chatId, resp);
   });
 
@@ -154,7 +148,6 @@ MongoClient.connect(url, function(err, client) {
 
   bot.on('message', (msg) => {
     const chatId = msg.chat.id;
-    // send a message to the chat acknowledging receipt of their message
     bot.sendMessage(chatId, 'Received your message');
   });
 });
