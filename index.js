@@ -1,6 +1,6 @@
 const TelegramBot = require('node-telegram-bot-api');
 // replace the value below with the Telegram token you receive from @BotFather
-const token = '842870644:AAGKNzgAygQuFHbqeiouCOgJ03OXgDF_eFw';
+const token = '*********************************************';
 const bot = new TelegramBot(token, {polling: true});
 const MongoClient = require('mongodb').MongoClient;
 const assert = require('assert');
